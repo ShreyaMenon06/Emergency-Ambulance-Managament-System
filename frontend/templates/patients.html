@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="bar"><h1>Patients</h1>
+  <form class="search" method="get"><input name="q" value="{{ q }}" placeholder="Search name or hospital..."><button class="btn">Search</button></form></div>
+<div class="scroll"><table>
+  <thead><tr><th>#</th><th>Name</th><th>Age</th><th>Gender</th><th>Blood group</th><th>What is wrong</th><th>Allergies</th><th>Hospital</th><th>Dispatch</th></tr></thead>
+  <tbody>
+  {% for p in patients %}
+  <tr><td>{{ p.patient_id }}</td><td><a href="{{ url_for('patient_detail', patient_id=p.patient_id) }}">{{ p.name }}</a></td>
+      <td>{{ p.age if p.age is not none else '' }}</td><td>{{ p.gender or '' }}</td><td>{{ p.blood_group or '' }}</td>
+      <td>{{ p.chief_complaint or '' }}</td><td>{{ p.allergies or '' }}</td><td>{{ p.hospital_name }} <span class="muted">{{ p.branch_name }}</span></td><td>#{{ p.dispatch_id }}</td></tr>
+  {% else %}<tr><td colspan="9" class="muted">No patients yet. Add one from a dispatch.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<p class="muted">New patients are added from a dispatch: Dispatches &rarr; <b>Add patient</b> (after the hospital is chosen).</p>
+{% endblock %}

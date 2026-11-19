@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="empty"><h2>We can't find that page</h2><p>The link may be old, or the record was deleted.</p>
+<a class="btn primary" href="{{ url_for('home') if user else url_for('login') }}">{{ 'Go to the dashboard' if user else 'Go to sign in' }}</a></div>
+{% endblock %}

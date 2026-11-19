@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<div class="bar">
+  <h1>Emergency calls</h1>
+  <form class="search" method="get">
+    <select name="status" onchange="this.form.submit()">
+      <option value="">All calls</option>
+      {% for s in ['Waiting', 'In progress', 'Completed', 'False alarm'] %}<option {{ 'selected' if status == s }}>{{ s }}</option>{% endfor %}
+    </select>
+    <input name="q" value="{{ q }}" placeholder="Search caller, place, type...">
+    <button class="btn">Search</button>
+  </form>
+  <a class="btn primary" href="{{ url_for('call_new') }}">+ New call</a>
+</div>
+<div class="scroll"><table>
+  <thead><tr><th>Call</th><th>Time</th><th>Status</th><th>Urgency</th><th>Type</th><th>Location</th><th>Caller</th><th></th></tr></thead>
+  <tbody>
+  {% for c in calls %}
+  <tr><td><a href="{{ url_for('call_detail', call_id=c.call_id) }}">#{{ c.call_id }}</a></td><td>{{ c.call_time|dt }}</td>
+      <td>{{ pill(c.call_status) }}</td><td>{{ pill(c.urgency_level) }}</td><td>{{ c.call_type }}</td><td>{{ c.pick_location }}</td><td>{{ c.caller }}</td>
+      <td>{% if c.call_status == 'Waiting' %}<a class="btn small primary" href="{{ url_for('call_dispatch', call_id=c.call_id) }}">Send ambulance</a>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="8" class="muted">No calls found.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

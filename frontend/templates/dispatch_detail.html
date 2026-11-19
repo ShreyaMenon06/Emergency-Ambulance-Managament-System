@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill, steps with context %}
+{% block body %}
+<div class="bar"><h1>Dispatch #{{ d.dispatch_id }} {{ pill(d.status) }}</h1>
+  <a class="btn" href="{{ url_for('board_page') }}">Live board</a></div>
+<div class="grid2">
+  <div class="card facts one">
+    <p><span>Emergency</span>{{ d.call_type }} {{ pill(d.urgency_level) }}</p>
+    <p><span>Pick-up</span>{{ d.pick_location }}</p>
+    <p><span>What happened</span>{{ d.description or '' }}</p>
+    <p><span>Caller</span>{{ d.caller or '' }}{% if phone %}, {{ phone }}{% endif %}</p>
+    <p><span>Ambulance</span>{{ d.vehicle_no }} ({{ d.type_of_ambulance }})</p>
+    <p><span>Crew</span>{{ d.driver }}{% if d.paramedic %} and {{ d.paramedic }}{% endif %}</p>
+    <p><span>{{ 'Hospital' if d.status in ('To Hospital', 'At Hospital', 'Completed') else 'Planned hospital' }}</span>{% if d.hospital_name %}{{ d.hospital_name }}, {{ d.branch_name }}{% else %}<span class="muted">none</span>{% endif %}</p>
+    <p><span>Response time</span>{% if d.response_time is not none %}{{ d.response_time }} minutes{% else %}<span class="muted">not reached yet</span>{% endif %}</p>
+    {% if d.status in ('En Route','At Scene','To Hospital','At Hospital') %}<div class="row">{{ steps(d, url_for('dispatch_detail', dispatch_id=d.dispatch_id)) }}</div>{% endif %}
+  </div>
+  <div class="card">
+    <h3 class="first">What happened, step by step</h3>
+    <ol class="timeline">
+      {% for e in events %}<li><b>{{ e.status }}</b><small>{{ e.changed_at|dt }}{% if e.changed_by %}, by {{ e.changed_by }}{% endif %}</small></li>
+      {% else %}<li class="muted">No history yet.</li>{% endfor %}
+    </ol>
+  </div>
+</div>
+<h2>Patients</h2>
+<div class="scroll"><table>
+  <thead><tr><th>Name</th><th>Age</th><th>Complaint</th><th>Allergies</th><th>Hospital</th></tr></thead>
+  <tbody>
+  {% for p in patients %}<tr><td><a href="{{ url_for('patient_detail', patient_id=p.patient_id) }}">{{ p.name }}</a></td>
+    <td>{{ p.age if p.age is not none else '' }}</td><td>{{ p.chief_complaint or '' }}</td><td>{{ p.allergies or '' }}</td><td>{{ p.hospital_name }}</td></tr>
+  {% else %}<tr><td colspan="5" class="muted">No patient recorded yet.{% if d.status in ('To Hospital', 'At Hospital', 'Completed') %} <a href="{{ url_for('patient_new', dispatch_id=d.dispatch_id) }}">Add a patient</a>{% endif %}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

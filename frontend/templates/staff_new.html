@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="bar"><h1>Add employee</h1><a class="btn" href="{{ url_for('staff_page') }}">All staff</a></div>
+<form method="post" class="card form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <h3 class="first">Who is joining</h3>
+  <div class="grid">
+    <label><span>Role <b class="req">*</b></span>
+      <select name="kind" id="kind" required>{% for key, label in kinds %}<option value="{{ key }}" {{ 'selected' if (f.get('kind') or kind) == key }}>{{ label }}</option>{% endfor %}</select></label>
+    <label><span>First name <b class="req">*</b></span><input name="first_name" maxlength="50" value="{{ f.get('first_name', '') }}" required></label>
+    <label><span>Middle name</span><input name="middle_name" maxlength="50" value="{{ f.get('middle_name', '') }}"></label>
+    <label><span>Last name <b class="req">*</b></span><input name="last_name" maxlength="50" value="{{ f.get('last_name', '') }}" required></label>
+    <label><span>Date of birth <b class="req">*</b></span><input name="dob" type="date" value="{{ f.get('dob', '') }}" required></label>
+    <label><span>Date of joining <b class="req">*</b></span><input name="date_of_joining" type="date" value="{{ f.get('date_of_joining', '') }}" required></label>
+    <label><span>Aadhar number <b class="req">*</b></span><input name="aadhar" inputmode="numeric" maxlength="12" value="{{ f.get('aadhar', '') }}" required></label>
+    <label><span>Phone number <b class="req">*</b></span><input name="phone_no" maxlength="20" value="{{ f.get('phone_no', '') }}" required></label>
+    <label><span>Street</span><input name="street" maxlength="100" value="{{ f.get('street', '') }}"></label>
+    <label><span>City</span><input name="city" maxlength="60" value="{{ f.get('city', '') }}"></label>
+    <label><span>State</span><input name="state" maxlength="60" value="{{ f.get('state', '') }}"></label>
+    <label><span>Pincode</span><input name="pincode" inputmode="numeric" maxlength="6" value="{{ f.get('pincode', '') }}"></label>
+  </div>
+
+  <div data-kind="Agent">
+    <h3>Call-centre work</h3>
+    <div class="grid">
+      <label><span>Shift <b class="req">*</b></span>
+        <select name="shift">{% for s in shifts %}<option {{ 'selected' if f.get('shift') == s }}>{{ s }}</option>{% endfor %}</select></label>
+      <label><span>Job title</span><input name="agent_role" maxlength="40" placeholder="Agent" value="{{ f.get('agent_role', '') }}"></label>
+      <label><span>Languages spoken</span><input name="languages" maxlength="100" placeholder="English, Hindi" value="{{ f.get('languages', '') }}"></label>
+    </div>
+  </div>
+  <div data-kind="Driver">
+    <h3>Driving licence</h3>
+    <div class="grid">
+      <label><span>Licence number <b class="req">*</b></span><input name="license_no" maxlength="30" value="{{ f.get('license_no', '') }}"></label>
+      <label><span>Licence expiry <b class="req">*</b></span><input name="license_expiry" type="date" value="{{ f.get('license_expiry', '') }}"></label>
+      <label><span>Years of driving experience</span><input name="driving_experience" type="number" min="0" max="60" value="{{ f.get('driving_experience', '') }}"></label>
+      <label><span>Usual ambulance</span>
+        <select name="ambulance_id"><option value="">None</option>{% for a in ambulances %}<option value="{{ a.ambulance_id }}" {{ 'selected' if f.get('ambulance_id') == a.ambulance_id|string }}>{{ a.vehicle_no }}</option>{% endfor %}</select></label>
+    </div>
+  </div>
+  <div data-kind="Paramedic">
+    <h3>Certification</h3>
+    <div class="grid">
+      <label><span>Certification number <b class="req">*</b></span><input name="certification_no" maxlength="30" value="{{ f.get('certification_no', '') }}"></label>
+      <label><span>Level <b class="req">*</b></span>
+        <select name="certification_level">{% for l in levels %}<option {{ 'selected' if f.get('certification_level') == l }}>{{ l }}</option>{% endfor %}</select></label>
+      <label><span>Usual ambulance</span>
+        <select name="ambulance_id"><option value="">None</option>{% for a in ambulances %}<option value="{{ a.ambulance_id }}" {{ 'selected' if f.get('ambulance_id') == a.ambulance_id|string }}>{{ a.vehicle_no }}</option>{% endfor %}</select></label>
+    </div>
+  </div>
+
+  <h3>Salary, leave and insurance</h3>
+  <div class="grid">
+    <label><span>Monthly salary (&#8377;) <b class="req">*</b></span><input name="salary" type="number" step="0.01" min="0" value="{{ f.get('salary', '') }}" required></label>
+    <label><span>Leave days per year <b class="req">*</b></span><input name="annual_leave_days" type="number" min="0" value="{{ f.get('annual_leave_days') or 24 }}" required></label>
+    <label class="wide"><span>Leave policy</span><input name="leave_policy" maxlength="200" value="{{ f.get('leave_policy') or '24 days per year' }}"></label>
+    <label class="wide"><span>Staff insurance</span><input name="staff_insurance" maxlength="100" value="{{ f.get('staff_insurance', '') }}"></label>
+  </div>
+  <p class="muted">Drivers and paramedics get an Employee ID (shown after saving) and choose their own password at the first sign-in, using the ID and the date of birth entered here. Call-centre agents share one login; HR marks their attendance.</p>
+  <div class="row"><button class="btn primary">Add employee</button><a class="btn" href="{{ url_for('staff_page') }}">Cancel</a></div>
+</form>
+<script>
+  var k=document.getElementById('kind');
+  function show(){
+    var boxes=document.querySelectorAll('[data-kind]');
+    for(var i=0;i<boxes.length;i++){
+      var on=boxes[i].getAttribute('data-kind')===k.value;
+      boxes[i].style.display=on?'block':'none';
+      var inputs=boxes[i].querySelectorAll('input,select');
+      for(var j=0;j<inputs.length;j++){inputs[j].disabled=!on;}
+    }
+  }
+  k.addEventListener('change',show);show();
+</script>
+{% endblock %}

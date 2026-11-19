@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>New emergency call</h1>
+<form method="post" class="card form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <h3>Caller</h3>
+  <div class="grid">
+    <label><span>Phone</span><input name="phone" value="{{ f.get('phone', '') }}" autofocus></label>
+    <label><span>First name</span><input name="first_name" value="{{ f.get('first_name', '') }}"></label>
+    <label><span>Last name</span><input name="last_name" value="{{ f.get('last_name', '') }}"></label>
+    <label class="wide"><span>Street</span><input name="street" maxlength="100" value="{{ f.get('street', '') }}"></label>
+    <label><span>City</span><input name="city" maxlength="60" value="{{ f.get('city', '') }}"></label>
+    <label><span>State</span><input name="state" maxlength="60" value="{{ f.get('state', '') }}"></label>
+    <label><span>Pincode</span><input name="pincode" maxlength="6" inputmode="numeric" value="{{ f.get('pincode', '') }}"></label>
+  </div>
+  <h3>Emergency <span class="muted">(the area decides which hospital is the nearest when you send the ambulance)</span></h3>
+  <div class="grid">
+    <label><span>Pick-up location <b class="req">*</b></span><input name="pick_location" value="{{ f.get('pick_location', '') }}" required></label>
+    <label><span>Area</span><select name="area"><option value="">Pick from the address</option>{% for a in settings.AREAS %}<option {{ 'selected' if f.get('area') == a }}>{{ a }}</option>{% endfor %}</select></label>
+    <label><span>Type of emergency <b class="req">*</b></span>
+      <select name="call_type" required><option value=""></option>{% for t in settings.CALL_TYPES %}<option {{ 'selected' if f.get('call_type') == t }}>{{ t }}</option>{% endfor %}</select></label>
+    <label><span>Urgency <b class="req">*</b></span>
+      <select name="urgency_level" required>{% for u in settings.URGENCY_LEVELS %}<option {{ 'selected' if f.get('urgency_level', 'High') == u }}>{{ u }}</option>{% endfor %}</select></label>
+    <label><span>Call duration (seconds)</span><input name="call_duration" type="number" min="0" value="{{ f.get('call_duration', '') }}"></label>
+    {% if role in ('ADMIN', 'AGENT') %}<label><span>Handled by agent <b class="req">*</b></span>
+      <select name="agent_id" required>{% for a in agents %}<option value="{{ a.agent_id }}" {{ 'selected' if (f.get('agent_id') or default_agent|string) == a.agent_id|string }}>{{ a.name }}</option>{% endfor %}</select></label>{% endif %}
+    <label class="wide"><span>What happened</span><input name="description" maxlength="400" value="{{ f.get('description', '') }}"></label>
+  </div>
+  <label class="check"><input type="checkbox" name="is_false_alarm" {{ 'checked' if f.get('is_false_alarm') }}> This is a false alarm (no ambulance will be sent)</label>
+  <div class="row"><button class="btn primary">Save call and choose ambulance</button><a class="btn" href="{{ url_for('calls_page') }}">Cancel</a></div>
+</form>
+{% endblock %}

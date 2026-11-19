@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="bar">
+  <h1>{{ t.label }}</h1>
+  <form class="search" method="get">
+    <input name="q" value="{{ q }}" placeholder="Search {{ t.label }}...">
+    <button class="btn">Search</button>
+    {% if q %}<a class="btn" href="{{ url_for('list_page', table=t.name) }}">Clear</a>{% endif %}
+  </form>
+  <a class="btn primary" href="{{ url_for('new_page', table=t.name) }}">+ Add new</a>
+</div>
+<div class="scroll">
+<table>
+  <thead><tr><th></th>{% if owners is not none %}<th>Employee</th><th>Role</th>{% endif %}{% for c in t.cols if c.name != 'IS_ACTIVE' %}<th>{{ c.label }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td class="act">
+      <a href="{{ url_for('edit_page', table=t.name, r=r.rid) }}">Edit</a>
+      <form method="post" action="{{ url_for('delete_page', table=t.name) }}" onsubmit="return confirm('Delete this record?');">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="r" value="{{ r.rid }}">
+        <button class="link danger">Delete</button>
+      </form>
+    </td>
+    {% if owners is not none %}{% if r.owner %}<td><b>{{ r.owner[0] }}</b></td><td>{{ r.owner[1] }}</td>{% else %}<td colspan="2" class="muted">Not linked to any employee</td>{% endif %}{% endif %}
+    {% for c in t.cols %}{% if c.name != 'IS_ACTIVE' %}<td>{{ r.cells[loop.index0] | show(c) }}</td>{% endif %}{% endfor %}
+  </tr>
+  {% else %}
+  <tr><td colspan="{{ t.cols|length + 1 + (2 if owners is not none else 0) }}" class="muted">No records{{ ' match your search' if q }}.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if owners is not none %}<p class="muted">Each employee (agent, driver or paramedic) points to exactly one HR record. To link a person to an HR record, edit that person under Agent, Driver or Paramedic.</p>{% endif %}
+<p class="muted">{{ rows|length }} record{{ '' if rows|length == 1 else 's' }}{{ ' (first %d shown)' % limit if rows|length >= limit }}</p>
+{% endblock %}

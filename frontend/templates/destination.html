@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<h1>Choose the hospital</h1>
+<div class="card facts">
+  <p><span>Dispatch</span>#{{ d.dispatch_id }} {{ pill(d.status) }}, ambulance {{ d.vehicle_no }}</p>
+  <p><span>Emergency</span>{{ d.call_type }} at {{ d.pick_location }}</p>
+</div>
+<p class="muted">Nearest first. The hospital chosen at dispatch is marked. Pick one with a free bed; the counts go down as patients are taken in.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Hospital</th><th>Area</th><th>Distance</th><th>Phone</th><th>Free beds</th><th>Count updated</th><th></th></tr></thead>
+  <tbody>
+  {% for h in hospitals %}
+  <tr><td><b>{{ h.hospital_name }}</b><br><span class="muted">{{ h.branch_name }}</span></td><td>{{ h.city }}</td><td>{% if h.distance_km is not none %}{{ h.distance_km }} km{% if h.nearest %} <b>nearest</b>{% endif %}{% endif %}{% if h.hospital_id == d.hospital_id %}<br><span class="muted">chosen at dispatch</span>{% endif %}</td><td>{{ h.phones or '' }}</td>
+    <td><span class="beds {{ 'none' if not h.beds_available else ('few' if h.beds_available < 5 else '') }}">{{ h.beds_available }}</span></td>
+    <td>{{ h.beds_updated_on|day }}</td>
+    <td>{% if h.beds_available %}
+      <form method="post"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="back" value="{{ back }}">
+        <input type="hidden" name="hospital_id" value="{{ h.hospital_id }}"><button class="btn small primary">Take patient here</button></form>
+      {% else %}<span class="muted">Full</span>{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<div class="row"><a class="btn" href="{{ back or url_for('dispatch_detail', dispatch_id=d.dispatch_id) }}">Cancel</a></div>
+{% endblock %}

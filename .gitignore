@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+# each person's own Oracle settings (password!) - never commit this
+/config.py

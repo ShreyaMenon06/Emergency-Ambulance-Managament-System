@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="bar"><h1>Apply for leave</h1>
+  <p class="muted lead">For call-centre agents. Enter your Employee ID, choose the dates and save. HR approves the request.</p></div>
+<form method="post" class="card form" style="max-width:720px">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="grid">
+    <label><span>Your Employee ID <b class="req">*</b></span><input name="emp_id" value="{{ f.get('emp_id', '') }}" placeholder="EMP005" autofocus required></label>
+    <label><span>Type <b class="req">*</b></span><select name="leave_type" required>{% for t in types %}<option {{ 'selected' if f.get('leave_type') == t }}>{{ t }}</option>{% endfor %}</select></label>
+    <label><span>From <b class="req">*</b></span><input name="start_date" type="date" value="{{ f.get('start_date', '') }}" required></label>
+    <label><span>To <b class="req">*</b></span><input name="end_date" type="date" value="{{ f.get('end_date', '') }}" required></label>
+    <label class="wide"><span>Reason</span><input name="reason" maxlength="200" value="{{ f.get('reason', '') }}"></label>
+  </div>
+  <p class="muted">Your Employee ID is on your Staff record; ask HR if you do not know it. The days come off your yearly leave only when HR approves.</p>
+  <div class="row"><button class="btn primary">Apply for leave</button></div>
+</form>
+{% endblock %}

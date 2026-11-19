@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<div class="bar"><h1>Leave and attendance</h1>
+</div>
+{% if who %}
+<div class="grid2">
+  <div class="card facts one">
+    <h3 class="first">{{ me.name }}</h3>
+    <p><span>Role</span>{{ me.role }}{% if me.title %}, {{ me.title }}{% endif %}</p>
+    <p><span>Leave this year</span><b>{{ me.leave_left|int }}</b> of {{ me.annual_leave_days }} days left</p>
+    {% if me.leave_policy %}<p><span>Leave policy</span>{{ me.leave_policy }}</p>{% endif %}
+    <p><span>Last 30 days</span>{{ counts.present }} present, {{ counts.half_day }} half day, {{ counts.absent }} absent, {{ counts.on_leave }} on leave
+       {% if me.attendance_pct is not none %}<b>({{ me.attendance_pct|int }}%)</b>{% endif %}</p>
+  </div>
+  <div class="card form">
+    <h3 class="first">Today's attendance</h3>
+    {% if today %}
+      <p>You are marked <b>{{ today.status }}</b> today{% if today.check_in %} at {{ today.check_in|dt }}{% endif %}.</p>
+      <p class="muted">If this is wrong, ask HR to change it.</p>
+    {% else %}
+      <p class="muted">You have not marked today yet.</p>
+      <form method="post" action="{{ url_for('my_attendance') }}" class="row">
+        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <button class="btn primary" name="status" value="Present">Mark present</button>
+        <button class="btn" name="status" value="Half Day">Mark half day</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+<form method="post" action="{{ url_for('my_leave') }}" class="card form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  
+  <h3 class="first">Apply for leave</h3>
+  <div class="grid">
+    <label><span>Type <b class="req">*</b></span>
+      <select name="leave_type" required>{% for t in types %}<option {{ 'selected' if f.get('leave_type') == t }}>{{ t }}</option>{% endfor %}</select></label>
+    <label><span>From <b class="req">*</b></span><input name="start_date" type="date" value="{{ f.get('start_date', '') }}" required></label>
+    <label><span>To <b class="req">*</b></span><input name="end_date" type="date" value="{{ f.get('end_date', '') }}" required></label>
+    <label class="wide"><span>Reason</span><input name="reason" maxlength="200" value="{{ f.get('reason', '') }}"></label>
+  </div>
+  <p class="muted">HR will approve or reject it. Approved days come off your yearly leave (Unpaid leave is not counted).</p>
+  <div class="row"><button class="btn primary">Send to HR</button></div>
+</form>
+<h3>My requests</h3>
+<div class="scroll"><table>
+  <thead><tr><th>Dates</th><th>Type</th><th>Days</th><th>Reason</th><th>Status</th><th>Decision</th><th></th></tr></thead>
+  <tbody>
+  {% for l in leaves %}
+  <tr><td>{{ l.start_date|day }} - {{ l.end_date|day }}</td><td>{{ l.leave_type }}</td><td>{{ l.days|int }}</td><td class="wrap">{{ l.reason or '' }}</td><td>{{ pill(l.status) }}</td>
+    <td class="muted">{% if l.status == 'Pending' %}waiting for HR{% else %}{{ l.decided_by or '' }}{% if l.decided_on %}, {{ l.decided_on|day }}{% endif %}{% endif %}</td>
+    <td class="act">{% if l.status == 'Pending' %}<form method="post" action="{{ url_for('my_leave_cancel', leave_id=l.leave_id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="link danger">Withdraw</button></form>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="7" class="muted">No leave requests yet.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endif %}
+{% endblock %}

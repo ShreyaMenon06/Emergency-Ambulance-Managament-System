@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<div class="bar"><h1>{{ p.name }} {% if p.is_active == 'N' %}<span class="pill left">Left</span>{% endif %}</h1><a class="btn" href="{{ url_for('staff_page') }}">All staff</a></div>
+<div class="grid2">
+  <div class="card facts one">
+    <h3 class="first">{{ p.role }} #{{ p.id }}</h3>
+    <p><span>Role</span>{{ p.title or '' }}</p>
+    <p><span>Phone</span>{{ p.phone_no or '' }}</p>
+    <p><span>Age</span>{% if p.age is not none %}{{ p.age }} years{% endif %}</p>
+    <p><span>Joined</span>{{ p.date_of_joining|day }}{% if p.years is not none %} ({{ p.years }} years){% endif %}</p>
+    {% if p.languages %}<p><span>Languages</span>{{ p.languages }}</p>{% endif %}
+    <p><span>Last 30 days</span>{{ counts.present }} present, {{ counts.half_day }} half day, {{ counts.absent }} absent, {{ counts.on_leave }} on leave
+       {% if p.attendance_pct is not none %}<b>({{ p.attendance_pct|int }}%)</b>{% endif %}</p>
+    <p><span>Leave this year</span>{{ p.leave_left|int }} of {{ p.annual_leave_days }} days left</p>
+  </div>
+  <form method="post" action="{{ url_for('staff_hr_update', hr_id=p.hr_id) }}" class="card form">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <h3 class="first">Salary, leave and insurance</h3>
+    <div class="grid">
+      <label><span>Monthly salary (&#8377;) <b class="req">*</b></span><input name="salary" type="number" step="0.01" min="0" value="{{ '%.2f' % (p.salary|float) if p.salary is not none }}" required></label>
+      <label><span>Leave days per year <b class="req">*</b></span><input name="annual_leave_days" type="number" min="0" value="{{ p.annual_leave_days }}" required></label>
+      <label class="wide"><span>Leave policy</span><input name="leave_policy" maxlength="200" value="{{ p.leave_policy or '' }}"></label>
+      <label class="wide"><span>Staff insurance</span><input name="staff_insurance" maxlength="100" value="{{ p.staff_insurance or '' }}"></label>
+    </div>
+    <div class="row"><button class="btn primary">Save</button></div>
+  </form>
+</div>
+<div class="card form">
+  <h3 class="first">Sign-in</h3>
+  <p><span class="muted">Employee ID</span> <b>{{ emp_id }}</b> &nbsp; <span class="muted">Date of birth</span> {{ dob|day }}</p>
+  {% if p.role == 'Agent' %}<p class="muted">Call-centre agents share one login. HR marks this agent's attendance (Attendance page) and enters their leave (Leave page).</p>
+  {% elif not login %}<p class="muted">This employee has no login.</p>
+  {% elif login.is_active != 'Y' %}<p>The login is switched off.</p>
+  {% elif not login.password_hash %}<p>No password yet. {{ p.name }} chooses one at the first sign-in: on the sign-in page press <b>First time? Set your password</b>, then enter the Employee ID and date of birth above.</p>
+  {% else %}<p>Password is set{% if login.last_login %}; last sign-in {{ login.last_login|dt }}{% endif %}. Forgot it? Clearing it lets {{ p.name }} choose a new one the same way.</p>
+  <form method="post" action="{{ url_for('staff_reset_login', hr_id=p.hr_id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="btn">Clear password</button></form>
+  {% endif %}
+</div>
+<div class="grid2">
+  <div><h3>Attendance, last 30 days</h3>
+    <div class="scroll"><table><thead><tr><th>Date</th><th>Status</th><th>Marked at</th></tr></thead>
+    <tbody>{% for h in history %}<tr><td>{{ h.att_date|day }}</td><td><span class="pill {{ {'Present':'paid','Half Day':'partial','Absent':'unpaid','On Leave':'at-scene'}[h.status] }}">{{ h.status }}</span></td><td class="muted">{% if h.check_in %}{{ h.check_in|dt }}{% else %}by HR{% endif %}</td></tr>
+    {% else %}<tr><td colspan="3" class="muted">No attendance is marked yet. <a href="{{ url_for('attendance_page') }}">Mark attendance</a></td></tr>{% endfor %}</tbody></table></div></div>
+  <div><h3>Leave requests</h3>
+    <div class="scroll"><table><thead><tr><th>Dates</th><th>Type</th><th>Days</th><th>Status</th></tr></thead>
+    <tbody>{% for l in leaves %}<tr><td>{{ l.start_date|day }} - {{ l.end_date|day }}</td><td>{{ l.leave_type }}</td><td>{{ l.days|int }}</td><td>{{ pill(l.status) }}</td></tr>
+    {% else %}<tr><td colspan="4" class="muted">No leave requests.</td></tr>{% endfor %}</tbody></table></div></div>
+</div>
+{% endblock %}

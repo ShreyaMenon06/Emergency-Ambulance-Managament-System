@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill, kpi with context %}
+{% block body %}
+<h1>Dashboard</h1>
+
+{% if k %}
+<div class="kpis">
+  {{ kpi(k.waiting_calls, 'Calls waiting for an ambulance', 'send one now' if k.waiting_calls else 'all calls handled', 'alert' if k.waiting_calls else '') }}
+  {{ kpi(k.active_dispatches, 'Ambulances on the road', 'see the live board') }}
+  {{ kpi(k.free_ambulances ~ ' / ' ~ k.total_ambulances, 'Ambulances free') }}
+  {{ kpi(k.unpaid_bills, 'Unpaid bills', k.unpaid_amount|money, 'warn' if k.unpaid_bills else '') }}
+  {{ kpi(k.avg_response if k.avg_response is not none else '-', 'Average response (min)', k.total_calls ~ ' calls in total') }}
+</div>
+<div class="bar"><h2>Calls waiting for an ambulance</h2><a class="btn primary" href="{{ url_for('call_new') }}">+ New emergency call</a></div>
+<div class="scroll"><table>
+  <thead><tr><th>Call</th><th>Time</th><th>Urgency</th><th>Type</th><th>Location</th><th>Caller</th><th></th></tr></thead>
+  <tbody>
+  {% for c in waiting %}
+  <tr><td><a href="{{ url_for('call_detail', call_id=c.call_id) }}">#{{ c.call_id }}</a></td><td>{{ c.call_time|dt }}</td>
+      <td>{{ pill(c.urgency_level) }}</td><td>{{ c.call_type }}</td><td>{{ c.pick_location }}</td><td>{{ c.caller }}</td>
+      <td><a class="btn small primary" href="{{ url_for('call_dispatch', call_id=c.call_id) }}">Send ambulance</a></td></tr>
+  {% else %}<tr><td colspan="7" class="muted">No calls are waiting.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<p class="muted">Follow every ambulance on the <a href="{{ url_for('board_page') }}">live board</a>.</p>
+{% endif %}
+
+{% if fleet is defined %}
+<div class="bar"><h2>Vehicles</h2><a href="{{ url_for('fleet_page') }}">Open vehicles</a></div>
+<div class="cards">
+  {% for a in fleet %}
+  <div class="card amb"><b>{{ a.vehicle_no }}</b> {{ pill(a.status) }}<br><span class="muted">{{ a.model }} - {{ a.type_of_ambulance }}</span><br>{{ a.current_location }}</div>
+  {% endfor %}
+</div>
+<div class="grid3">
+  <div><h3>Insurance ending soon</h3>
+    {% for i in ins_alerts %}<p class="alertline {{ 'late' if i.days_left < 0 }}">{{ i.vehicle_no }}: {{ i.insurer }}, {{ i.expiry_date|day }} ({{ 'expired' if i.days_left < 0 else i.days_left|int ~ ' days left' }})</p>
+    {% else %}<p class="muted">Nothing expires in the next {{ settings.INSURANCE_WARN_DAYS }} days.</p>{% endfor %}</div>
+  <div><h3>Maintenance due</h3>
+    {% for m in maint_alerts %}<p class="alertline {{ 'late' if m.days_left < 0 }}">{{ m.vehicle_no }}: {{ m.maintenance_type }}, due {{ m.next_due_date|day }} ({{ 'overdue' if m.days_left < 0 else m.days_left|int ~ ' days left' }})</p>
+    {% else %}<p class="muted">Nothing is due in the next {{ settings.MAINTENANCE_WARN_DAYS }} days.</p>{% endfor %}</div>
+  <div><h3>Equipment to check</h3>
+    {% for e in equip_alerts %}<p class="alertline {{ 'late' if e.equipment_condition == 'Needs Repair' or (e.days_left is not none and e.days_left < 0) }}">{{ e.vehicle_no }} - {{ e.equipment_name }}: {% if e.equipment_condition == 'Needs Repair' %}needs repair{% elif e.days_left < 0 %}expired {{ e.expiry_date|day }}{% else %}expires {{ e.expiry_date|day }} ({{ e.days_left|int }} days left){% endif %}</p>
+    {% else %}<p class="muted">All equipment is in order.</p>{% endfor %}</div>
+</div>
+{% endif %}
+
+{% if staff_n %}
+<div class="bar"><h2>Human resources</h2><a href="{{ url_for('staff_page') }}">Open staff list</a></div>
+<div class="kpis">
+  {{ kpi(staff_n.agents + staff_n.drivers + staff_n.paramedics, 'Active staff', staff_n.agents ~ ' agents, ' ~ staff_n.drivers ~ ' drivers, ' ~ staff_n.paramedics ~ ' paramedics') }}
+  {{ kpi(hr_n.not_marked_today, 'Attendance not marked today', 'open the sheet' if hr_n.not_marked_today else 'all marked', 'warn' if hr_n.not_marked_today else '') }}
+  {{ kpi(hr_n.absent_today ~ ' / ' ~ hr_n.on_leave_today, 'Absent / on leave today') }}
+  {{ kpi(hr_n.pending_leaves, 'Leave requests waiting', 'decide now' if hr_n.pending_leaves else 'none waiting', 'alert' if hr_n.pending_leaves else '') }}
+</div>
+{% if pending_leaves %}
+<div class="bar"><h3>Waiting for a decision</h3><a href="{{ url_for('leaves_page', status='Pending') }}">All requests</a></div>
+{% for l in pending_leaves %}<p class="alertline">{{ l.name }} ({{ l.role }}): {{ l.leave_type }} leave, {{ l.start_date|day }} - {{ l.end_date|day }} ({{ l.days|int }} day{{ '' if l.days|int == 1 else 's' }})</p>{% endfor %}
+{% endif %}
+<h3>Driving licences ending soon</h3>
+{% for l in lic_alerts %}<p class="alertline {{ 'late' if l.days_left < 0 }}">{{ l.name }} ({{ l.license_no }}): {{ l.license_expiry|day }} ({{ 'expired' if l.days_left < 0 else l.days_left|int ~ ' days left' }})</p>
+{% else %}<p class="muted">No licence expires in the next {{ settings.LICENSE_WARN_DAYS }} days.</p>{% endfor %}
+{% endif %}
+
+{% if recent is defined %}
+<div class="bar"><h2>Latest changes</h2><a href="{{ url_for('audit_page') }}">Open the audit log</a></div>
+<div class="scroll"><table class="audit">
+  <thead><tr><th>When</th><th>Who</th><th>What</th><th>Table</th><th>Details</th></tr></thead>
+  <tbody>{% for e in recent %}<tr><td>{{ e.changed_at.strftime('%d %b, %H:%M') if e.changed_at }}</td><td><b>{{ e.changed_by or '' }}</b></td>
+    <td>{{ {'INSERT':'Added','UPDATE':'Changed','DELETE':'Deleted'}[e.action] }}</td><td>{{ e.table_name }} {{ e.record_id or '' }}</td><td class="wrap details">{{ e.details or '' }}</td></tr>
+  {% else %}<tr><td colspan="5" class="muted">No changes recorded yet.</td></tr>{% endfor %}</tbody>
+</table></div>
+{% endif %}
+
+{% endblock %}

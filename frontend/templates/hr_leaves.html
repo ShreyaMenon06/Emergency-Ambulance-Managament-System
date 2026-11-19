@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<div class="bar"><h1>Leave</h1>
+  <div class="seg2">
+    <a class="btn {{ 'primary' if not status }}" href="{{ url_for('leaves_page') }}">All</a>
+    <a class="btn {{ 'primary' if status == 'Pending' }}" href="{{ url_for('leaves_page', status='Pending') }}">Waiting</a>
+    <a class="btn {{ 'primary' if status == 'Approved' }}" href="{{ url_for('leaves_page', status='Approved') }}">Approved</a>
+    <a class="btn {{ 'primary' if status == 'Rejected' }}" href="{{ url_for('leaves_page', status='Rejected') }}">Rejected</a>
+  </div></div>
+<div class="scroll"><table>
+  <thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Days</th><th>Reason</th><th>Status</th><th>Decision</th></tr></thead>
+  <tbody>
+  {% for l in leaves %}
+  <tr><td><a href="{{ url_for('staff_detail', hr_id=l.hr_id) }}"><b>{{ l.name }}</b></a><br><span class="muted">{{ l.role }}</span></td>
+    <td>{{ l.leave_type }}</td><td>{{ l.start_date|day }} - {{ l.end_date|day }}</td><td>{{ l.days|int }}</td><td class="wrap">{{ l.reason or '' }}</td><td>{{ pill(l.status) }}</td>
+    <td>{% if l.status == 'Pending' %}
+      <span class="steps">
+      <form method="post" action="{{ url_for('leave_decide', leave_id=l.leave_id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="decision" value="Approved"><input type="hidden" name="back" value="{{ request.full_path.rstrip('?') }}"><button class="btn small primary">Approve</button></form>
+      <form method="post" action="{{ url_for('leave_decide', leave_id=l.leave_id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="decision" value="Rejected"><input type="hidden" name="back" value="{{ request.full_path.rstrip('?') }}"><button class="btn small danger">Reject</button></form></span>
+      {% else %}<span class="muted">{{ l.decided_by or '' }}{% if l.decided_on %}, {{ l.decided_on|day }}{% endif %}</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="7" class="muted">No leave requests here.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<h2>Record a leave request for an employee</h2>
+<p class="muted">Staff can apply for leave themselves (drivers and paramedics from their own login, agents from "Apply for leave"). Use this form when someone asks by phone or on paper; the request then waits in the list above for approval.</p>
+<form method="post" action="{{ url_for('leave_new') }}" class="card form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="grid">
+    <label><span>Employee asking for leave <b class="req">*</b></span><select name="hr_id" required><option value=""></option>{% for p in people %}<option value="{{ p.hr_id }}" {{ 'selected' if f.get('hr_id') == p.hr_id|string }}>{{ p.name }} ({{ p.role }})</option>{% endfor %}</select></label>
+    <label><span>Type <b class="req">*</b></span><select name="leave_type">{% for t in types %}<option {{ 'selected' if f.get('leave_type') == t }}>{{ t }}</option>{% endfor %}</select></label>
+    <label><span>From <b class="req">*</b></span><input type="date" name="start_date" value="{{ f.get('start_date', '') }}" required></label>
+    <label><span>To <b class="req">*</b></span><input type="date" name="end_date" value="{{ f.get('end_date', '') }}" required></label>
+    <label class="wide"><span>Reason</span><input name="reason" maxlength="200" value="{{ f.get('reason', '') }}"></label>
+  </div>
+  <p class="muted">Approving takes the days off the person's yearly leave (Unpaid leave is not counted) and marks them On Leave on the attendance sheet.</p>
+  <div class="row"><button class="btn primary">Save request</button></div>
+</form>
+{% endblock %}

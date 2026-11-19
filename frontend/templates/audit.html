@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>Audit log</h1>
+<p class="muted">Every addition, change and deletion made in the system: who did it, when, and what changed. Entries cannot be edited here.</p>
+<form method="get" class="card form filters">
+  <div class="grid">
+    <label><span>Person</span><select name="user"><option value="">Anyone</option>{% for u in users %}<option {{ 'selected' if a.user == u }}>{{ u }}</option>{% endfor %}</select></label>
+    <label><span>Table</span><select name="table"><option value="">All</option>{% for k, l in tables %}<option value="{{ k }}" {{ 'selected' if a.table == k }}>{{ l }}</option>{% endfor %}</select></label>
+    <label><span>Action</span><select name="action"><option value="">All</option>{% for x in ('INSERT','UPDATE','DELETE') %}<option value="{{ x }}" {{ 'selected' if a.action == x }}>{{ {'INSERT':'Added','UPDATE':'Changed','DELETE':'Deleted'}[x] }}</option>{% endfor %}</select></label>
+    <label><span>From</span><input type="date" name="day_from" value="{{ a.day_from }}"></label>
+    <label><span>To</span><input type="date" name="day_to" value="{{ a.day_to }}"></label>
+    <label><span>Search in details</span><input name="q" value="{{ a.q }}" placeholder="a name, a record number ..."></label>
+  </div>
+  <div class="row"><button class="btn primary">Show</button><a class="btn" href="{{ url_for('audit_page') }}">Clear</a></div>
+</form>
+<div class="scroll"><table class="audit">
+  <thead><tr><th>When</th><th>Who</th><th>What</th><th>Table</th><th>Record</th><th>Details</th></tr></thead>
+  <tbody>
+  {% for e in entries %}
+  <tr><td>{{ e.changed_at.strftime('%d %b %Y, %H:%M:%S') if e.changed_at }}</td><td><b>{{ e.changed_by or '' }}</b></td>
+    <td><span class="pill {{ {'INSERT':'paid','UPDATE':'partial','DELETE':'unpaid'}[e.action] }}">{{ {'INSERT':'Added','UPDATE':'Changed','DELETE':'Deleted'}[e.action] }}</span></td>
+    <td>{{ e.table_name }}</td><td>{{ e.record_id or '' }}</td><td class="wrap details">{{ e.details or '' }}</td></tr>
+  {% else %}<tr><td colspan="6" class="muted">Nothing matches. Changes made in the application appear here at once.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% if entries|length >= limit %}<p class="muted">Showing the latest {{ limit }}. Narrow the search to see older entries.</p>{% endif %}
+{% endblock %}

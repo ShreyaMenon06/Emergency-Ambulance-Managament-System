@@ -1,0 +1,56 @@
+{% macro chase(d) %}{% if d.status in ('En Route', 'At Scene', 'To Hospital', 'At Hospital') and d.idle_min is not none and d.idle_min >= STALE_MINUTES %}<div class="chase">No update for {{ d.idle_min }} min. Phone the crew: {{ d.driver }} {{ d.driver_phone or 'no number' }}{% if d.paramedic %}, {{ d.paramedic }} {{ d.paramedic_phone or 'no number' }}{% endif %}</div>{% endif %}{% endmacro %}
+{% macro pill(s) %}<span class="pill {{ (s or '')|lower|replace(' ', '-') }}">{{ s or '-' }}</span>{% endmacro %}
+
+{% macro step(d, action, label, back, kind='') %}
+<form method="post" action="{{ url_for('dispatch_step', dispatch_id=d.dispatch_id, action=action) }}"{% if action == 'cancel' %} onsubmit="return confirm('Cancel this dispatch?');"{% endif %}>
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="back" value="{{ back }}">
+  <button class="btn small {{ kind }}">{{ label }}</button>
+</form>
+{% endmacro %}
+
+{% macro steps(d, back) %}
+<div class="steps">
+  {% if d.status == 'En Route' %}
+    {{ step(d, 'arrive', 'Reached scene', back, 'primary') }}{{ step(d, 'cancel', 'Cancel', back, 'danger') }}
+  {% elif d.status == 'At Scene' %}
+    {{ step(d, 'tohospital', 'Heading to hospital', back, 'primary') }}{{ step(d, 'complete', 'Finish here', back) }}{{ step(d, 'cancel', 'Cancel', back, 'danger') }}
+  {% elif d.status == 'To Hospital' %}
+    {{ step(d, 'hospital', 'Reached hospital', back, 'primary') }}
+  {% elif d.status == 'At Hospital' %}
+    {{ step(d, 'complete', 'Complete trip', back, 'primary') }}
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro dispatch_table(items, back, show_call=True) %}
+<div class="scroll"><table>
+  <thead><tr><th>#</th>{% if show_call %}<th>Call</th><th>Location</th>{% endif %}<th>Status</th><th>Ambulance</th><th>Driver</th><th>Paramedic</th>
+  <th>Hospital</th><th>Dispatched</th><th>Response (min)</th><th>Next step</th><th>More</th></tr></thead>
+  <tbody>
+  {% for d in items %}
+  <tr>
+    <td>{{ d.dispatch_id }}</td>
+    {% if show_call %}<td><a href="{{ url_for('call_detail', call_id=d.call_id) }}">#{{ d.call_id }} {{ d.call_type }}</a></td><td>{{ d.pick_location }}</td>{% endif %}
+    <td>{{ pill(d.status) }}</td>
+    <td>{{ d.vehicle_no }} <span class="muted">{{ d.type_of_ambulance }}</span></td>
+    <td>{{ d.driver }}</td><td>{{ d.paramedic or '' }}</td>
+    <td>{{ d.hospital_name or '' }}</td>
+    <td>{{ d.dispatch_time|dt }}</td>
+    <td>{{ d.response_time if d.response_time is not none else '' }}</td>
+    <td>{{ steps(d, back) }}{{ chase(d) }}</td>
+    <td class="links">
+      <a href="{{ url_for('dispatch_detail', dispatch_id=d.dispatch_id) }}">Details</a>
+      {% if d.status in ('To Hospital', 'At Hospital', 'Completed') %}<a href="{{ url_for('patient_new', dispatch_id=d.dispatch_id) }}">Add patient{% if d.patients %} ({{ d.patients }}){% endif %}</a>{% endif %}
+      {% if d.billing_id %}<a href="{{ url_for('bill_detail', billing_id=d.billing_id) }}">Bill</a> {{ pill(d.bill_status) }}
+      {% elif d.status in ('At Hospital', 'Completed') %}<span class="muted">Bill not made yet</span>{% if role == 'ADMIN' %} <a href="{{ url_for('bill_new', dispatch_id=d.dispatch_id) }}">Make it</a>{% endif %}{% endif %}
+    </td>
+  </tr>
+  {% else %}<tr><td colspan="12" class="muted">No dispatches.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endmacro %}
+
+{% macro kpi(value, label, hint='', tone='') %}
+<div class="card kpi {{ tone }}"><span class="num">{{ value }}</span><span class="lab">{{ label }}</span>{% if hint %}<span class="muted">{{ hint }}</span>{% endif %}</div>
+{% endmacro %}

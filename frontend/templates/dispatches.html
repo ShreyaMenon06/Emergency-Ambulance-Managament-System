@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% from "macros.html" import dispatch_table with context %}
+{% block body %}
+<div class="bar"><h1>Dispatches</h1>
+  <div class="seg2"><a class="btn {{ 'primary' if view != 'all' }}" href="{{ url_for('dispatches_page', view='active') }}">On the road</a>
+  <a class="btn {{ 'primary' if view == 'all' }}" href="{{ url_for('dispatches_page', view='all') }}">All</a></div></div>
+{{ dispatch_table(dispatches, url_for('dispatches_page', view=view)) }}
+<p class="muted">A dispatch moves: En Route &rarr; At Scene &rarr; At Hospital &rarr; Completed. The response time is worked out from the dispatch and arrival times.</p>
+{% endblock %}

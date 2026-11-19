@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>New user</h1>
+<form method="post" class="card form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="grid">
+    <label><span>Full name <b class="req">*</b></span><input name="full_name" value="{{ f.get('full_name', '') }}" required></label>
+    <label><span>Username <b class="req">*</b></span><input name="username" value="{{ f.get('username', '') }}" autocomplete="off" required></label>
+    <label><span>Role <b class="req">*</b></span>
+      <select name="user_role" id="role" required>{% for key, label in roles %}<option value="{{ key }}" {{ 'selected' if f.get('user_role') == key }}>{{ label }}</option>{% endfor %}</select></label>
+    <label><span>First password <b class="req">*</b></span><input name="password" type="password" autocomplete="new-password" required></label>
+  </div>
+  <p class="muted">At least 8 characters with letters and numbers. This page is for administrators, HR officers and maintenance supervisors. Agents, drivers and paramedics get their login automatically when they are added under Staff.</p>
+  <div class="row"><button class="btn primary">Create user</button><a class="btn" href="{{ url_for('users_page') }}">Cancel</a></div>
+</form>
+{% endblock %}

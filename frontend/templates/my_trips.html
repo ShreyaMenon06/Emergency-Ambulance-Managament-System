@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<div class="bar"><h1>My trips</h1>
+  <p class="muted lead">The trips you are assigned to. The agent updates the trip status. At the end of the trip you make the bill and record the money you collect; the agent only sees whether it is done.</p></div>
+{% for d in trips %}
+<div class="card facts one" style="max-width:640px;margin-bottom:14px">
+  <h3 class="first">{{ d.vehicle_no }}, {{ d.call_type }} {{ pill(d.urgency_level) }} {{ pill(d.status) }}</h3>
+  <p><span>Pick-up</span>{{ d.pick_location }}</p>
+  <p><span>Sent</span>{{ d.dispatch_time|dt }}</p>
+  <p><span>Crew</span>{{ d.driver }}{% if d.paramedic %} and {{ d.paramedic }}{% endif %}</p>
+  {% if d.hospital_name %}<p><span>Hospital</span>{{ d.hospital_name }}, {{ d.branch_name }}</p>{% endif %}
+  {% if d.billing_id %}
+    <p><span>Bill</span>{{ d.bill_total|money }}, received {{ d.bill_paid|money }} {{ pill(d.bill_status) }}</p>
+    {% if (d.bill_total - d.bill_paid)|float > 0 %}
+    <form method="post" action="{{ url_for('my_trip_collect', dispatch_id=d.dispatch_id) }}" class="row">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label><span>Money collected (&#8377;)</span><input name="amount" type="number" step="0.01" min="0.01" max="{{ (d.bill_total - d.bill_paid)|float }}" value="{{ '%.2f' % ((d.bill_total - d.bill_paid)|float) }}" required></label>
+      <label><span>Paid by</span><select name="payment_mode">{% for m in modes %}<option>{{ m }}</option>{% endfor %}</select></label>
+      <button class="btn primary">Money collected</button>
+    </form>
+    {% endif %}
+  {% elif d.status in ('At Hospital', 'Completed') %}
+    <form method="post" action="{{ url_for('my_trip_bill', dispatch_id=d.dispatch_id) }}" class="form bill-form" data-base="{{ prices.get(d.type_of_ambulance, (0, 0))[0] }}" data-rate="{{ prices.get(d.type_of_ambulance, (0, 0))[1] }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <h3>Make the bill</h3>
+      <div class="grid">
+        <label><span>Distance travelled (km) <b class="req">*</b></span><input name="distance_km" type="number" step="0.1" min="0" value="{{ d.suggested_km if d.suggested_km is not none else '' }}" required></label>
+        <label><span>Paid by <b class="req">*</b></span><select name="payment_mode" required>{% for m in modes %}<option>{{ m }}</option>{% endfor %}</select></label>
+        <label><span>Money received now (&#8377;)</span><input name="amount_paid" type="number" step="0.01" min="0" placeholder="0"></label>
+        <p class="wide"><b>Total to collect: <span class="bill-total">&#8377;0.00</span></b> <span class="muted">(base fare &#8377;{{ '%g' % prices.get(d.type_of_ambulance, (0, 0))[0] }} + distance x &#8377;{{ '%g' % prices.get(d.type_of_ambulance, (0, 0))[1] }} per km)</span></p>
+        {% if not d.customer_id %}<label><span>Payer name <b class="req">*</b></span><input name="payer_name" required></label>
+        <label><span>Payer phone</span><input name="payer_phone"></label>{% endif %}
+      </div>
+      <p class="muted">{% if d.suggested_km is not none %}The distance is a suggestion from the map; correct it from your trip meter. {% endif %}The total is the base fare plus the distance at the rate of the {{ d.type_of_ambulance }} ambulance. {% if not d.customer_id %}This call has no caller on record, so enter who is paying.{% endif %}</p>
+      <div class="row"><button class="btn primary">Make bill</button></div>
+    </form>
+  {% else %}
+    <p class="muted">You can make the bill once the ambulance reaches the hospital.</p>
+  {% endif %}
+</div>
+{% else %}<p class="clear">No trips have been assigned to you yet.</p>{% endfor %}
+<script>
+  document.querySelectorAll('.bill-form').forEach(function(f){
+    var base=parseFloat(f.dataset.base)||0,rate=parseFloat(f.dataset.rate)||0;
+    var km=f.querySelector('[name=distance_km]'),paid=f.querySelector('[name=amount_paid]'),out=f.querySelector('.bill-total'),typed=false;
+    paid.addEventListener('input',function(){typed=true;});
+    function calc(){var t=(base+(parseFloat(km.value)||0)*rate).toFixed(2);out.textContent='\u20b9'+t;if(!typed){paid.value=t;}}
+    km.addEventListener('input',calc);calc();
+  });
+</script>
+{% endblock %}

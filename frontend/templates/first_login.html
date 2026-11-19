@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="signin">
+  <section class="hero">
+    <div class="siren"><span></span></div>
+    <svg class="bigamb" viewBox="0 0 64 40" aria-hidden="true">
+      <rect x="14" y="1.5" width="10" height="4.5" rx="1.2" fill="#4c9aff"/>
+      <rect x="2" y="6" width="34" height="24" rx="3" fill="#d62839"/><path d="M36 12H48L60 22V30H36Z" fill="#d62839"/>
+      <path d="M40 15.5H47L54.5 22H40Z" fill="#fff"/><rect x="16" y="11" width="6" height="14" fill="#fff"/><rect x="12" y="15" width="14" height="6" fill="#fff"/>
+      <circle cx="16" cy="31" r="5.5" fill="#0b141c"/><circle cx="16" cy="31" r="2" fill="#fff"/><circle cx="48" cy="31" r="5.5" fill="#0b141c"/><circle cx="48" cy="31" r="2" fill="#fff"/>
+    </svg>
+    <h1>Every call answered.<br>Every ambulance accounted for.</h1>
+    <p>Take the emergency call, send the nearest free ambulance, follow it to the hospital and bill the trip, all in one place.</p>
+  </section>
+  <section class="formside">
+    <form method="post" class="login-form">
+      <h2>Set your password</h2>
+      <p class="muted">First time here? HR gave you an Employee ID. Enter it with your date of birth, then choose your own password.</p>
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in msgs %}<div class="flash {{ cat }}" role="alert">{{ msg }}</div>{% endfor %}
+      {% endwith %}
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <label><span>Employee ID</span><input name="username" value="{{ f.get('username', '') }}" autocomplete="username" autofocus required></label>
+      <label><span>Date of birth</span><input name="dob" type="date" value="{{ f.get('dob', '') }}" required></label>
+      <label><span>New password</span><input name="new" type="password" autocomplete="new-password" required></label>
+      <label><span>New password again</span><input name="again" type="password" autocomplete="new-password" required></label>
+      <p class="muted">At least 8 characters with letters and numbers.</p>
+      <button class="btn primary big">Save and sign in</button>
+      <p class="muted"><a href="{{ url_for('login') }}">I already have a password</a></p>
+    </form>
+  </section>
+</div>
+{% endblock %}

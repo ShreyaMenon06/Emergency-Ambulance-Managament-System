@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<h1>Ambulances</h1>
+<p class="muted">The state of every vehicle right now. Only "Available" ambulances are offered when you send one to a call.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Vehicle</th><th>Type</th><th>Status</th><th>Where it is</th><th>Last GPS ping</th><th>Now</th></tr></thead>
+  <tbody>
+  {% for a in fleet %}
+  <tr><td><b>{{ a.vehicle_no }}</b><br><span class="muted">{{ a.model }}</span></td><td>{{ a.type_of_ambulance }}</td><td>{{ pill(a.status) }}</td>
+      <td>{{ a.current_location or '' }}</td>
+      <td>{% if a.last_ping %}{{ a.last_ping|dt }}{% else %}<span class="muted">no signal yet</span>{% endif %}</td>
+      <td>{% if a.active_dispatch %}<a href="{{ url_for('dispatch_detail', dispatch_id=a.active_dispatch) }}">On dispatch #{{ a.active_dispatch }}</a>
+          {% elif a.status == 'Maintenance' %}<span class="muted">With the maintenance team</span>{% else %}<span class="muted">Free</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="6" class="muted">No ambulances are recorded.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

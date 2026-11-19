@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block body %}
+<p class="muted lead">Call a hospital, then enter the number of free beds it tells you. The count also goes down by itself each time a patient is taken there.</p>
+<div class="scroll"><table>
+  <thead><tr><th>Hospital</th><th>Address</th><th>Phone</th><th>Free beds</th><th>Count updated</th><th>Update</th></tr></thead>
+  <tbody>
+  {% for h in hospitals %}
+  <tr><td><b>{{ h.hospital_name }}</b><br><span class="muted">{{ h.branch_name }}</span></td><td>{{ h.street }}, {{ h.city }}</td><td>{{ h.phones or '' }}</td>
+    <td><span class="beds {{ 'none' if not h.beds_available else ('few' if h.beds_available < 5 else '') }}">{{ h.beds_available }}</span></td>
+    <td>{{ h.beds_updated_on|day }}</td>
+    <td><form method="post" action="{{ url_for('hospital_beds', hospital_id=h.hospital_id) }}" class="inlineform">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input name="beds_available" type="number" min="0" value="{{ h.beds_available }}" aria-label="Free beds">
+      <button class="btn small">Save</button></form></td></tr>
+  {% else %}<tr><td colspan="6" class="muted">No hospitals yet. Add one under Records, then Hospital.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<p class="muted">New hospitals and phone numbers are added under Records, then Hospital.</p>
+{% endblock %}

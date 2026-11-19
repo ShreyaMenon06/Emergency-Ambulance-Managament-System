@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<div class="bar noprint"><h1>Receipt</h1>
+  <button class="btn primary" onclick="window.print()">Print receipt</button><a class="btn" href="{{ url_for('bills_page') }}">All bills</a></div>
+<div class="card receipt">
+  <div class="rhead"><b>Emergency Ambulance Service</b><span>Receipt {{ b.receipt or b.billing_id }}</span></div>
+  <p><span>Date</span>{{ b.bill_date|day }}</p>
+  <p><span>Customer</span>{{ b.customer }}</p>
+  <p><span>Dispatch</span>#{{ b.dispatch_id }}{% if d %}, ambulance {{ d.vehicle_no }} ({{ d.type_of_ambulance }}){% endif %}</p>
+  {% if d %}<p><span>Journey</span>{{ d.pick_location }}{% if d.hospital_name %} to {{ d.hospital_name }}{% endif %}</p>{% endif %}
+  <hr>
+  <p><span>Base fare</span>{{ b.base_fare|money }}</p>
+  <p><span>Distance</span>{{ b.distance_km if b.distance_km is not none else 0 }} km, charge {{ (b.total_amount - b.base_fare)|money }}</p>
+  <p class="grand"><span>Total</span>{{ b.total_amount|money }}</p>
+  <hr>
+  <p><span>Received</span>{{ b.amount_paid|money }}</p>
+  <p><span>Balance</span><b>{{ b.balance|money }}</b></p>
+  <p><span>Payment status</span>{{ pill(b.payment_status) }}</p>
+  <p><span>Last paid by</span>{{ b.payment_mode or '' }}</p>
+  <p><span>Billed by</span>{{ b.billed_by_name or 'Administrator' }}</p>
+  <p><span>Agent on the trip</span>{{ b.agent or '' }}</p>
+</div>
+{% if b.balance|float > 0 and role == 'ADMIN' %}
+<form method="post" action="{{ url_for('bill_payment', billing_id=b.billing_id) }}" class="card form noprint" style="max-width:560px">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <h3 class="first">Record a payment</h3>
+  <div class="grid">
+    <label><span>Amount received (&#8377;)</span><input name="amount" type="number" step="0.01" min="0.01" max="{{ b.balance|float }}" value="{{ '%.2f' % (b.balance|float) }}" required></label>
+    <label><span>Payment mode</span><select name="payment_mode">{% for m in settings.PAYMENT_MODES %}<option {{ 'selected' if b.payment_mode == m }}>{{ m }}</option>{% endfor %}</select></label>
+  </div>
+  <div class="row"><button class="btn primary">Save payment</button></div>
+</form>
+{% endif %}
+{% endblock %}

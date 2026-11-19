@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<h1>Add patient</h1>
+<div class="card facts">
+  <p><span>Dispatch</span>#{{ d.dispatch_id }} {{ pill(d.status) }}, ambulance {{ d.vehicle_no }}</p>
+  <p><span>Emergency</span>{{ d.call_type }} at {{ d.pick_location }}</p>
+  <p><span>Taken to</span>{% if d.hospital_name %}<b>{{ d.hospital_name }}, {{ d.branch_name }}</b>{% else %}<span class="muted">no hospital chosen yet</span>{% endif %}</p>
+</div>
+{% if not d.hospital_id %}
+<div class="empty"><h2>Choose the hospital first</h2><p>A patient is recorded against the hospital they are taken to. Use "Heading to hospital" on the dispatch.</p>
+  <a class="btn primary" href="{{ url_for('dispatch_detail', dispatch_id=d.dispatch_id) }}">Back to the dispatch</a></div>
+{% else %}
+<form method="post" class="card form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="grid">
+    <label><span>First name <b class="req">*</b></span><input name="first_name" value="{{ f.get('first_name', '') }}" required></label>
+    <label><span>Middle name</span><input name="middle_name" value="{{ f.get('middle_name', '') }}"></label>
+    <label><span>Last name</span><input name="last_name" value="{{ f.get('last_name', '') }}"></label>
+    <label><span>Date of birth</span><input name="dob" type="date" value="{{ f.get('dob', '') }}"></label>
+    <label><span>Gender</span><select name="gender"><option value=""></option>{% for g in settings.GENDERS %}<option {{ 'selected' if f.get('gender') == g }}>{{ g }}</option>{% endfor %}</select></label>
+    <label><span>Blood group</span><select name="blood_group"><option value=""></option>{% for g in settings.BLOOD_GROUPS %}<option {{ 'selected' if f.get('blood_group') == g }}>{{ g }}</option>{% endfor %}</select></label>
+    <label class="wide"><span>What is wrong</span><input name="chief_complaint" maxlength="200" value="{{ f.get('chief_complaint', '') }}" placeholder="For example: chest pain, difficulty breathing"></label>
+    <label class="wide"><span>Known allergies (comma separated)</span><input name="known_allergies" value="{{ f.get('known_allergies', '') }}" placeholder="Penicillin, Peanuts"></label>
+  </div>
+  <p class="muted">Saving takes one bed at {{ d.hospital_name }}.</p>
+  <div class="row"><button class="btn primary">Save patient</button><a class="btn" href="{{ url_for('dispatch_detail', dispatch_id=d.dispatch_id) }}">Cancel</a></div>
+</form>
+{% endif %}
+{% endblock %}

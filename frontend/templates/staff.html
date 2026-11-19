@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "macros.html" import kpi with context %}
+{% block body %}
+<div class="bar"><h1>Staff</h1>
+  <div class="seg2">
+    <a class="btn {{ 'primary' if not kind }}" href="{{ url_for('staff_page') }}">Everyone</a>
+    <a class="btn {{ 'primary' if kind == 'Agent' }}" href="{{ url_for('staff_page', type='Agent') }}">Call-centre agents</a>
+    <a class="btn {{ 'primary' if kind == 'Driver' }}" href="{{ url_for('staff_page', type='Driver') }}">Drivers</a>
+    <a class="btn {{ 'primary' if kind == 'Paramedic' }}" href="{{ url_for('staff_page', type='Paramedic') }}">Paramedics</a>
+    <a class="btn primary" href="{{ url_for('staff_new') }}">+ Add employee</a>
+  </div></div>
+<div class="kpis">{{ kpi(n.agents, 'Active agents') }}{{ kpi(n.drivers, 'Active drivers') }}{{ kpi(n.paramedics, 'Active paramedics') }}</div>
+<div class="scroll"><table>
+  <thead><tr><th>Name</th><th>Role</th><th>Phone</th><th>Age</th><th>Experience</th><th>Languages</th><th>Salary</th><th>Attendance (30 days)</th><th>Leave left</th><th></th></tr></thead>
+  <tbody>
+  {% for s in staff %}
+  <tr class="{{ 'off' if s.is_active == 'N' }}"><td><a href="{{ url_for('staff_detail', hr_id=s.hr_id) }}"><b>{{ s.name }}</b></a>{% if s.is_active == 'N' %} <span class="pill left">Left</span>{% endif %}<br><span class="muted">{{ s.role }} &middot; {{ 'EMP%03d'|format(s.hr_id|int) }}</span></td>
+      <td>{{ s.title or '' }}{% if s.ambulance %}<br><span class="muted">Ambulance {{ s.ambulance }}</span>{% endif %}</td><td class="num">{{ s.phone_no or '' }}</td>
+      <td>{{ s.age if s.age is not none else '' }}{% if s.age is not none %} yrs{% endif %}</td>
+      <td>{{ s.years if s.years is not none else '' }}{% if s.years is not none %} yrs{% endif %}<br><span class="muted">since {{ s.date_of_joining|day }}</span></td>
+      <td>{% if s.languages %}<span class="chips">{% for l in s.languages.split(',') %}<span class="chip">{{ l.strip() }}</span>{% endfor %}</span>{% endif %}</td>
+      <td><b>{{ s.salary|money }}</b></td>
+      <td>{% if s.attendance_pct is not none %}{{ s.attendance_pct|int }}%{% else %}<span class="muted">not marked</span>{% endif %}</td>
+      <td>{{ s.leave_left|int }} of {{ s.annual_leave_days }} days{% if s.pending_leaves %}<br><a href="{{ url_for('leaves_page', status='Pending') }}"><span class="pill partial">{{ s.pending_leaves }} waiting</span></a>{% endif %}</td>
+      <td><a class="btn small" href="{{ url_for('staff_detail', hr_id=s.hr_id) }}">Open</a></td></tr>
+  {% else %}<tr><td colspan="10" class="muted">No staff found.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<h3>Driving licences ending soon</h3>
+{% for l in lic_alerts %}<p class="alertline {{ 'late' if l.days_left < 0 }}">{{ l.name }} ({{ l.license_no }}): {{ l.license_expiry|day }} ({{ 'expired' if l.days_left < 0 else l.days_left|int ~ ' days left' }})</p>
+{% else %}<p class="muted">No licence expires in the next {{ settings.LICENSE_WARN_DAYS }} days.</p>{% endfor %}
+<p class="muted">Someone who leaves is marked as Left (Active = N) and never deleted, so their old records stay correct.</p>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block body %}
+<h1>{{ title }}</h1>
+<form method="post" class="card form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  {% if mode == 'edit' %}<input type="hidden" name="r" value="{{ rid }}">{% endif %}
+  <div class="grid">
+  {% for c in t.cols if not c.virtual and not (mode == 'new' and c.name == 'IS_ACTIVE') %}
+    {% set is_pk = c.name in t.pk %}
+    {% set auto = is_pk and t.auto_pk %}
+    {% set locked = is_pk and mode == 'edit' %}
+    <label>
+      <span>{{ c.label }}{% if c.required and not auto %} <b class="req">*</b>{% endif %}</span>
+      {% if c.choices %}
+        <select name="{{ c.key }}" {{ 'required' if c.required }}>
+          <option value=""></option>
+          {% for ch in c.choices %}<option {{ 'selected' if values.get(c.key) == ch }}>{{ ch }}</option>{% endfor %}
+        </select>
+      {% else %}
+        <input name="{{ c.key }}"
+          {% if c.kind == 'number' %}type="number" step="any"
+          {% elif c.kind == 'date' %}type="date"
+          {% elif c.kind == 'datetime' %}type="datetime-local" step="1"
+          {% else %}type="text"{% if c.maxlen and c.kind == 'text' %} maxlength="{{ c.maxlen }}"{% endif %}
+          {% endif %}
+          {% if c.fk %}list="dl_{{ c.key }}"{% endif %}
+          {{ 'required' if c.required and not auto }}
+          {{ 'readonly' if locked }}
+          {% if auto and mode == 'new' %}placeholder="(automatic)"{% endif %}
+          {% if c.kind == 'list' %}placeholder="comma separated, e.g. one, two"{% endif %}
+          value="{{ values.get(c.key, '') }}">
+      {% endif %}
+      {% if c.fk %}
+        <datalist id="dl_{{ c.key }}">
+          {% for v, lab in opts.get(c.key, []) %}<option value="{{ v }}">{{ lab }}</option>{% endfor %}
+        </datalist>
+      {% endif %}
+    </label>
+  {% endfor %}
+  </div>
+  <div class="row">
+    <button class="btn primary">Save</button>
+    <a class="btn" href="{{ url_for('list_page', table=t.name) }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

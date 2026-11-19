@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<div class="bar"><h1>{{ a.vehicle_no }} {{ pill(a.status) }}</h1><a class="btn" href="{{ url_for('fleet_page') }}">All vehicles</a></div>
+<div class="grid2">
+  <div class="card facts one">
+    <p><span>Model</span>{{ a.model or '' }}{% if a.manufacture_year %} ({{ a.manufacture_year }}){% endif %}</p>
+    <p><span>Type</span>{{ a.type_of_ambulance }}</p>
+    <p><span>Location</span>{{ a.current_location or '' }}</p>
+    <p><span>GPS</span>{% for g in pings[:1] %}{{ g.log_time|dt }}, {{ '%.4f'|format(g.latitude|float) }}, {{ '%.4f'|format(g.longitude|float) }}{% else %}<span class="muted">no signal recorded</span>{% endfor %}</p>
+  </div>
+  <form method="post" action="{{ url_for('fleet_update', ambulance_id=a.ambulance_id) }}" class="card form" id="status">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <h3 class="first">Availability</h3>
+    {% if a.active_dispatch %}
+      <p class="muted">This ambulance is on <a href="{{ url_for('dispatch_detail', dispatch_id=a.active_dispatch) }}">dispatch #{{ a.active_dispatch }}</a> and cannot be taken out of service until the trip ends.</p>
+    {% else %}
+    <div class="grid">
+      <label><span>Status</span><select name="status">{% for s in statuses %}<option {{ 'selected' if a.status == s }}>{{ s }}</option>{% endfor %}</select></label>
+      <label><span>Where it is</span><input name="current_location" placeholder="{{ a.current_location or 'Garage, base ...' }}"></label>
+    </div>
+    <p class="muted">Choose Maintenance while it is in the workshop. An ambulance in Maintenance is not offered to the agents.</p>
+    <div class="row"><button class="btn primary">Save</button></div>
+    {% endif %}
+  </form>
+</div>
+
+<h2 id="insurance">Insurance</h2>
+<div class="scroll"><table>
+  <thead><tr><th>Policy</th><th>Insurer</th><th>Type</th><th>From</th><th>Until</th><th>Premium</th></tr></thead>
+  <tbody>{% for p in policies %}<tr><td>{{ p.policy_no }}</td><td>{{ p.insurer }}</td><td>{{ p.policy_type or '' }}</td><td>{{ p.start_date|day }}</td>
+    <td>{{ p.expiry_date|day }} {% if p.days_left is not none and p.days_left < 0 %}<span class="pill unpaid">expired</span>{% elif p.days_left is not none and p.days_left <= settings.INSURANCE_WARN_DAYS %}<span class="pill partial">{{ p.days_left|int }} days left</span>{% endif %}</td>
+    <td>{{ p.premium|money }}</td></tr>
+  {% else %}<tr><td colspan="6" class="muted">No insurance policy is recorded.</td></tr>{% endfor %}</tbody>
+</table></div>
+<details class="addbox"><summary class="btn small">Add a policy (renewal)</summary>
+<form method="post" action="{{ url_for('fleet_insurance', ambulance_id=a.ambulance_id) }}" class="card form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="grid">
+    <label><span>Policy number <b class="req">*</b></span><input name="policy_no" required></label>
+    <label><span>Insurer <b class="req">*</b></span><input name="insurer" required></label>
+    <label><span>Type <b class="req">*</b></span><select name="policy_type">{% for t in policy_types %}<option>{{ t }}</option>{% endfor %}</select></label>
+    <label><span>Start date <b class="req">*</b></span><input type="date" name="start_date" value="{{ today }}" required></label>
+    <label><span>Expiry date <b class="req">*</b></span><input type="date" name="expiry_date" required></label>
+    <label><span>Premium (&#8377;)</span><input type="number" step="0.01" min="0" name="premium"></label>
+  </div>
+  <div class="row"><button class="btn primary">Add policy</button></div>
+</form></details>
+
+<h2 id="service">Service history</h2>
+<div class="scroll"><table>
+  <thead><tr><th>Date</th><th>Work</th><th>Details</th><th>Workshop</th><th>Recorded by</th><th>Cost</th><th>Next due</th></tr></thead>
+  <tbody>{% for m in services %}<tr><td>{{ m.maintenance_date|day }}</td><td>{{ m.maintenance_type or '' }}</td><td class="wrap">{{ m.description or '' }}</td><td>{{ m.workshop or '' }}</td><td>{{ m.handled_by or '' }}</td>
+    <td>{{ m.cost|money }}</td><td>{{ m.next_due_date|day }} {% if m.days_left is not none and m.days_left < 0 %}<span class="pill unpaid">overdue</span>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="7" class="muted">No service is recorded.</td></tr>{% endfor %}</tbody>
+</table></div>
+<details class="addbox"><summary class="btn small">Record a service</summary>
+<form method="post" action="{{ url_for('fleet_service', ambulance_id=a.ambulance_id) }}" class="card form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="grid">
+    <label><span>Date <b class="req">*</b></span><input type="date" name="maintenance_date" value="{{ today }}" required></label>
+    <label><span>Work done <b class="req">*</b></span><select name="maintenance_type">{% for t in service_types %}<option>{{ t }}</option>{% endfor %}</select></label>
+    <label><span>Workshop</span><input name="workshop"></label>
+    <label><span>Cost (&#8377;)</span><input type="number" step="0.01" min="0" name="cost"></label>
+    <label><span>Next service due</span><input type="date" name="next_due_date"></label>
+    <label class="wide"><span>Details</span><input name="description" maxlength="400"></label>
+  </div>
+  <div class="row"><button class="btn primary">Save service</button></div>
+</form></details>
+
+<h2 id="equipment">Equipment on board</h2>
+<div class="scroll"><table>
+  <thead><tr><th>Item</th><th>Qty</th><th>Condition</th><th>Expiry</th><th></th></tr></thead>
+  <tbody>{% for e in equipment %}<tr><td>{{ e.equipment_name }}</td><td>{{ e.quantity }}</td>
+    <td><span class="pill {{ 'unpaid' if e.equipment_condition == 'Needs Repair' else ('partial' if e.equipment_condition == 'Fair' else 'paid') }}">{{ e.equipment_condition }}</span></td>
+    <td>{{ e.expiry_date|day }} {% if e.days_left is not none and e.days_left < 0 %}<span class="pill unpaid">expired</span>{% endif %}</td>
+    <td><form method="post" action="{{ url_for('fleet_equipment_condition', ambulance_id=a.ambulance_id, equipment_no=e.equipment_no) }}" class="inlineform">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <select name="equipment_condition">{% for c in conditions %}<option {{ 'selected' if e.equipment_condition == c }}>{{ c }}</option>{% endfor %}</select><button class="btn small">Update</button></form></td></tr>
+  {% else %}<tr><td colspan="5" class="muted">No equipment is recorded.</td></tr>{% endfor %}</tbody>
+</table></div>
+<details class="addbox"><summary class="btn small">Add equipment</summary>
+<form method="post" action="{{ url_for('fleet_equipment', ambulance_id=a.ambulance_id) }}" class="card form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="grid">
+    <label><span>Item <b class="req">*</b></span><input name="equipment_name" required></label>
+    <label><span>Quantity <b class="req">*</b></span><input type="number" min="0" name="quantity" value="1" required></label>
+    <label><span>Condition <b class="req">*</b></span><select name="equipment_condition">{% for c in conditions %}<option>{{ c }}</option>{% endfor %}</select></label>
+    <label><span>Expiry date</span><input type="date" name="expiry_date"></label>
+  </div>
+  <div class="row"><button class="btn primary">Add equipment</button></div>
+</form></details>
+{% endblock %}

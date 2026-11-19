@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill, dispatch_table with context %}
+{% block body %}
+<div class="bar"><h1>Call #{{ c.call_id }} {{ pill(c.call_status) }}</h1>
+  {% if c.call_status == 'Waiting' %}<a class="btn primary" href="{{ url_for('call_dispatch', call_id=c.call_id) }}">Send an ambulance</a>{% endif %}
+  <a class="btn" href="{{ url_for('calls_page') }}">All calls</a></div>
+<div class="card facts">
+  <p><span>Time</span>{{ c.call_time|dt }}</p>
+  <p><span>Urgency</span>{{ pill(c.urgency_level) }}</p>
+  <p><span>Type</span>{{ c.call_type }}</p>
+  <p><span>Pick-up</span>{{ c.pick_location }}</p>
+  <p><span>Caller</span>{{ c.caller }}</p>
+  <p><span>What happened</span>{{ c.description or '' }}</p>
+</div>
+<h2>Dispatches for this call</h2>
+{{ dispatch_table(dispatches, url_for('call_detail', call_id=c.call_id), show_call=False) }}
+{% endblock %}

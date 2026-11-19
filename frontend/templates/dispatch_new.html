@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<h1>Send an ambulance</h1>
+<div class="card facts">
+  <p><span>Call</span>#{{ c.call_id }} - {{ c.call_type }} {{ pill(c.urgency_level) }}</p>
+  <p><span>Pick-up</span>{{ c.pick_location }}</p>
+  <p><span>Caller</span>{{ c.caller }}</p>
+</div>
+{% if c.is_false_alarm == 'Y' %}<div class="flash error">This call is a false alarm. No ambulance can be sent.</div>
+{% elif not ambulances %}<div class="flash error">No ambulance is free right now. Wait for one to finish, or set one to Available on the Fleet board.</div>
+{% elif not drivers %}<div class="flash error">No driver is free right now.</div>{% else %}
+<form method="post" class="card form">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+  <div class="grid">
+    <label class="wide"><span>Ambulance <b class="req">*</b> <span class="muted">(closest to the pick-up first{% if not has_pos %}; no area on this call, so no distances{% endif %})</span></span>
+      <select name="ambulance_id" id="amb" required>
+        {% for a in ambulances %}<option value="{{ a.ambulance_id }}" {{ 'selected' if (f.get('ambulance_id') and f.get('ambulance_id')|int == a.ambulance_id) or (not f.get('ambulance_id') and a.nearest) }}>{{ a.vehicle_no }} - {{ a.type_of_ambulance }} - {{ a.current_location }}{% if a.distance_km is not none %} - {{ a.distance_km }} km away{% endif %}{% if a.nearest %} (nearest){% endif %}</option>{% endfor %}
+      </select></label>
+    <label><span>Driver <b class="req">*</b></span>
+      <select name="driver_id" id="drv" required><option value=""></option>{% for d in drivers %}<option value="{{ d.driver_id }}" data-amb="{{ d.ambulance_id or '' }}">{{ d.name }}</option>{% endfor %}</select></label>
+    <label class="wide"><span>Hospital <b class="req">*</b> <span class="muted">(nearest first{% if not has_pos %}; no area on this call, so no distances{% endif %})</span></span>
+      <select name="hospital_id" required>
+        {% for h in hospitals %}<option value="{{ h.hospital_id }}" {{ 'selected' if (f.get('hospital_id') and f.get('hospital_id')|int == h.hospital_id) or (not f.get('hospital_id') and h.nearest) }} {{ 'disabled' if not h.beds_available }}>{{ h.hospital_name }}, {{ h.branch_name }}{% if h.distance_km is not none %} - {{ h.distance_km }} km{% endif %} - {{ h.beds_available }} free bed{{ '' if h.beds_available == 1 else 's' }}{% if h.nearest %} (nearest){% endif %}</option>{% endfor %}
+      </select></label>
+    <label><span>Paramedic</span>
+      <select name="paramedic_id" id="par"><option value="">None</option>
+        {% for p in paramedics %}<option value="{{ p.paramedic_id }}" data-amb="{{ p.ambulance_id or '' }}">{{ p.name }}{% if p.certification_level %} ({{ p.certification_level }}){% endif %}</option>{% endfor %}
+      </select></label>
+    {% if role in ('ADMIN', 'AGENT') %}<label><span>On behalf of agent <b class="req">*</b></span>
+      <select name="agent_id" required>{% for a in agents %}<option value="{{ a.agent_id }}" {{ 'selected' if a.agent_id == default_agent }}>{{ a.name }}</option>{% endfor %}</select></label>{% endif %}
+  </div>
+  {% if role in ('ADMIN', 'AGENT') %}<p class="muted">Every dispatch is recorded against a call-centre agent. Choose the agent who is handling this call.</p>{% endif %}
+  <p class="muted">Each ambulance has its own driver and paramedic, and they are filled in when you pick the ambulance. If that driver or paramedic is not free today (leave, absent or busy), they are not in the list: choose someone else from it. Only free ambulances, drivers and paramedics are listed. The dispatch time and the ambulance's "On Duty" status are set automatically. The hospital offered first is the nearest one with a free bed; change it if the patient needs another.</p>
+  <div class="row"><button class="btn primary">Dispatch now</button><a class="btn" href="{{ url_for('call_detail', call_id=c.call_id) }}">Cancel</a></div>
+</form>
+<script>
+  var amb=document.getElementById('amb'),par=document.getElementById('par'),drv=document.getElementById('drv');
+  function crew(sel,none){for(var i=0;i<sel.options.length;i++){if(sel.options[i].getAttribute('data-amb')===amb.value){sel.selectedIndex=i;return;}}if(none)sel.selectedIndex=0;}
+  function pick(){crew(drv,true);crew(par,true);}
+  amb.addEventListener('change',pick);pick();
+</script>
+{% endif %}
+{% endblock %}

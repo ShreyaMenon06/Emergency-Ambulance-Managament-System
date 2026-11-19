@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} - Ambulance Control</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23d62839'/%3E%3Crect x='26' y='12' width='12' height='40' fill='%23fff'/%3E%3Crect x='12' y='26' width='40' height='12' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% macro logo() %}
+<svg class="logo" viewBox="0 0 64 40" role="img" aria-label="Ambulance">
+  <rect x="14" y="1.5" width="10" height="4.5" rx="1.2" fill="#4c9aff"/>
+  <rect x="2" y="6" width="34" height="24" rx="3" fill="#d62839"/>
+  <path d="M36 12H48L60 22V30H36Z" fill="#d62839"/>
+  <path d="M40 15.5H47L54.5 22H40Z" fill="#fff"/>
+  <rect x="16" y="11" width="6" height="14" fill="#fff"/><rect x="12" y="15" width="14" height="6" fill="#fff"/>
+  <circle cx="16" cy="31" r="5.5" fill="#15202b"/><circle cx="16" cy="31" r="2" fill="#fff"/>
+  <circle cx="48" cy="31" r="5.5" fill="#15202b"/><circle cx="48" cy="31" r="2" fill="#fff"/>
+</svg>
+{% endmacro %}
+{% if user %}
+<input type="checkbox" id="menu" class="menu-toggle" hidden>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="{{ url_for('home') }}">{{ logo() }}<span>Ambulance<br>Control</span></a>
+    {% if ops_ok %}<a class="btn primary newcall" href="{{ url_for('call_new') }}">New emergency call</a>{% endif %}
+    <nav>
+      {% if role not in ('DRIVER', 'PARAMEDIC') %}<a href="{{ url_for('home') }}" class="{{ 'on' if section == 'home' }}">Dashboard</a>{% endif %}
+      {% if role == 'AGENT' %}<a href="{{ url_for('agent_leave') }}" class="{{ 'on' if section == 'agentleave' }}">Apply for leave</a>{% endif %}
+      {% if role in ('DRIVER', 'PARAMEDIC') %}<a href="{{ url_for('my_trips') }}" class="{{ 'on' if section == 'mytrips' }}">My trips</a>{% endif %}
+      {% if self_ok %}<a href="{{ url_for('my_leave') }}" class="{{ 'on' if section == 'myleave' }}">Leave and attendance</a>{% endif %}
+      {% if ops_ok %}
+      <p class="group">Operations</p>
+      <a href="{{ url_for('board_page') }}" class="{{ 'on' if section == 'board' }}">Live board{% if waiting_n %}<b class="count" title="Calls waiting for an ambulance">{{ waiting_n }}</b>{% endif %}</a>
+      <a href="{{ url_for('calls_page') }}" class="{{ 'on' if section == 'calls' }}">Calls</a>
+      <a href="{{ url_for('dispatches_page') }}" class="{{ 'on' if section == 'dispatches' }}">Dispatches</a>
+      <a href="{{ url_for('ambulances_page') }}" class="{{ 'on' if section == 'ambulances' }}">Ambulances</a>
+      <a href="{{ url_for('patients_page') }}" class="{{ 'on' if section == 'patients' }}">Patients</a>
+      <a href="{{ url_for('hospitals_page') }}" class="{{ 'on' if section == 'hospitals' }}">Hospitals</a>
+      <a href="{{ url_for('bills_page') }}" class="{{ 'on' if section == 'bills' }}">Billing</a>
+      {% endif %}
+      {% if fleet_ok %}
+      <p class="group">Maintenance</p>
+      <a href="{{ url_for('fleet_page') }}" class="{{ 'on' if section == 'fleet' }}">Vehicles</a>
+      {% endif %}
+      {% if hr_ok %}
+      <p class="group">Human resources</p>
+      <a href="{{ url_for('staff_page') }}" class="{{ 'on' if section == 'staff' }}">Staff</a>
+      <a href="{{ url_for('attendance_page') }}" class="{{ 'on' if section == 'attendance' }}">Attendance</a>
+      <a href="{{ url_for('leaves_page') }}" class="{{ 'on' if section == 'leaves' }}">Leave</a>
+      {% endif %}
+      {% if admin_ok %}
+      <p class="group">Administration</p>
+      <a href="{{ url_for('audit_page') }}" class="{{ 'on' if section == 'audit' }}">Audit log</a>
+      <a href="{{ url_for('users_page') }}" class="{{ 'on' if section == 'users' }}">Users</a>
+      {% endif %}
+      {% if nav %}
+      <details class="records" {{ 'open' if request.endpoint in ('list_page','new_page','edit_page') }}>
+        <summary>Records</summary>
+        {% for key, label in nav %}<a href="{{ url_for('list_page', table=key) }}" class="{{ 'on' if request.view_args and request.view_args.get('table') == key }}">{{ label }}</a>{% endfor %}
+      </details>
+      {% endif %}
+    </nav>
+    <div class="me"><span class="avatar">{{ (full_name or user)[:1]|upper }}</span>
+      <span>{{ full_name or user }}<small>{{ role_name }}</small></span>
+      <span class="mel"><a href="{{ url_for('password_page') }}">Password</a><a href="{{ url_for('logout') }}">Sign out</a></span></div>
+  </aside>
+  <div class="stage">
+    <header class="top">
+      <label for="menu" class="burger" aria-label="Menu">&#9776;</label>
+      <span class="spacer"></span>
+      <span class="clock" id="clock"></span>
+    </header>
+    <main>
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in msgs %}<div class="flash {{ cat }}" role="status">{{ msg }}</div>{% endfor %}
+      {% endwith %}
+      {% block body %}{% endblock %}
+    </main>
+  </div>
+</div>
+<script>
+  (function(){var c=document.getElementById('clock');function t(){c.textContent=new Date().toLocaleString('en-IN',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}t();setInterval(t,20000);
+  document.querySelectorAll('.flash.ok').forEach(function(f){setTimeout(function(){f.classList.add('gone')},6000)});})();
+</script>
+{% else %}
+{{ self.body() }}
+{% endif %}
+</body>
+</html>

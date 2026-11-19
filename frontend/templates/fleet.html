@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<h1>Vehicles</h1>
+<div class="scroll"><table>
+  <thead><tr><th>Vehicle</th><th>Type</th><th>Status</th><th>Location</th><th>Insured until</th><th>Next service due</th><th></th></tr></thead>
+  <tbody>
+  {% for a in fleet %}
+  <tr><td><b>{{ a.vehicle_no }}</b><br><span class="muted">{{ a.model }}</span></td><td>{{ a.type_of_ambulance }}</td><td>{{ pill(a.status) }}</td><td>{{ a.current_location or '' }}</td>
+      <td>{{ a.insured_until|day }}</td><td>{{ a.next_service|day }}</td>
+      <td><a class="btn small" href="{{ url_for('fleet_detail', ambulance_id=a.ambulance_id) }}">Open</a></td></tr>
+  {% else %}<tr><td colspan="7" class="muted">No ambulances are recorded. Add one under Records, Ambulance.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<div class="grid3">
+  <div><h3>Insurance ending soon</h3>
+    {% for i in ins_alerts %}<p class="alertline {{ 'late' if i.days_left < 0 }}">{{ i.vehicle_no }} - {{ i.policy_no }}, {{ i.insurer }}: {{ i.expiry_date|day }} ({{ 'expired' if i.days_left < 0 else i.days_left|int ~ ' days left' }})</p>
+    {% else %}<p class="muted">Nothing expires in the next {{ settings.INSURANCE_WARN_DAYS }} days.</p>{% endfor %}</div>
+  <div><h3>Service due</h3>
+    {% for m in maint_alerts %}<p class="alertline {{ 'late' if m.days_left < 0 }}">{{ m.vehicle_no }} - {{ m.maintenance_type }}: due {{ m.next_due_date|day }} ({{ 'overdue' if m.days_left < 0 else m.days_left|int ~ ' days left' }})</p>
+    {% else %}<p class="muted">Nothing is due in the next {{ settings.MAINTENANCE_WARN_DAYS }} days.</p>{% endfor %}</div>
+  <div><h3>Equipment to check</h3>
+    {% for e in equip_alerts %}<p class="alertline {{ 'late' if e.equipment_condition == 'Needs Repair' or (e.days_left is not none and e.days_left < 0) }}">{{ e.vehicle_no }} - {{ e.equipment_name }}: {% if e.equipment_condition == 'Needs Repair' %}needs repair{% elif e.days_left < 0 %}expired {{ e.expiry_date|day }}{% else %}expires {{ e.expiry_date|day }} ({{ e.days_left|int }} days left){% endif %}</p>
+    {% else %}<p class="muted">All equipment is in order.</p>{% endfor %}</div>
+</div>
+<p class="muted">"On Duty" is set automatically when an ambulance is dispatched and cleared when the trip ends. Open a vehicle to record its insurance, services and equipment.</p>
+{% endblock %}

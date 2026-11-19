@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="empty"><h2>You can't open this page</h2><p>Your role does not include it. Use the menu to go to a page you can use.</p>
+<a class="btn primary" href="{{ url_for('home') }}">Go to the dashboard</a></div>
+{% endblock %}

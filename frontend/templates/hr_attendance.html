@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="bar"><h1>Attendance</h1>
+  <form method="get" class="inlineform"><input type="date" name="date" value="{{ day.isoformat() }}" max="{{ today.isoformat() }}"><button class="btn small">Show</button>
+    <a class="btn small" href="{{ url_for('attendance_page', date=prev_day) }}">&larr; Previous day</a>
+    {% if day < today %}<a class="btn small" href="{{ url_for('attendance_page', date=next_day) }}">Next day &rarr;</a>{% endif %}</form></div>
+<p class="muted">{{ day.strftime('%A, %d %B %Y') }}. Drivers and paramedics mark their own attendance from their login; you mark the agents. Here you can also correct anyone, and at the end of the day press <b>Close the day</b>: everybody still unmarked becomes Absent (or On Leave when an approved leave covers the day).</p>
+<form method="post">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="date" value="{{ day.isoformat() }}">
+  <div class="scroll"><table>
+    <thead><tr><th>Name</th><th>Role</th><th>Marked at</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for p in sheet %}
+    <tr><td><b>{{ p.name }}</b></td><td>{{ p.role }}</td>
+      <td class="muted">{% if p.check_in %}{{ p.check_in|dt }}{% elif p.status %}by HR{% else %}not marked{% endif %}</td>
+      <td><span class="seg">{% for st in statuses %}<label><input type="radio" name="s_{{ p.hr_id }}" value="{{ st }}"
+        {{ 'checked' if (p.status == st) or (not p.status and p.has_leave == 'Y' and st == 'On Leave') }}> {{ st }}</label>{% endfor %}</span></td></tr>
+    {% else %}<tr><td colspan="4" class="muted">There are no active staff.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  <div class="row" style="margin-top:14px"><button class="btn primary">Save changes</button></div>
+</form>
+{% if day <= today %}
+<form method="post" action="{{ url_for('attendance_close') }}" class="row" style="margin-top:10px">
+  <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="date" value="{{ day.isoformat() }}">
+  <button class="btn">Close the day: mark everybody unmarked as Absent / On Leave</button>
+</form>
+{% endif %}
+{% endblock %}

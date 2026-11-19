@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill, steps, chase with context %}
+{% block body %}
+{% set onroad = cols|map(attribute=1)|map('length')|sum %}
+<div class="bar">
+  <p class="muted lead">{{ waiting|length }} waiting, {{ onroad }} on the road, {{ free|length }} ambulance{{ '' if free|length == 1 else 's' }} free. This page refreshes itself every 20 seconds.</p>
+</div>
+{% if stale %}<div class="flash error"><b>{{ stale|length }} trip{{ '' if stale|length == 1 else 's' }} with no update for {{ STALE_MINUTES }} minutes or more.</b> Phone the crew and update the status below.</div>{% endif %}
+{% if unbilled %}<div class="flash ok"><b>{{ unbilled|length }} completed trip{{ '' if unbilled|length == 1 else 's' }} where the crew has not made the bill yet:</b>
+  {% for d in unbilled %}<a href="{{ url_for('dispatch_detail', dispatch_id=d.dispatch_id) }}">{{ d.vehicle_no }}, {{ d.call_type }} (#{{ d.dispatch_id }}, {{ d.driver }})</a>{{ '' if loop.last else ', ' }}{% endfor %}. Remind the crew to make it under My trips.</div>{% endif %}
+<div class="board">
+  <section class="lane waiting-lane">
+    <h2>Waiting <b>{{ waiting|length }}</b></h2>
+    {% for c in waiting %}
+    <article class="tile u-{{ (c.urgency_level or '')|lower }}">
+      <div class="t1"><b>{{ c.call_type }}</b> {{ pill(c.urgency_level) }}</div>
+      <p>{{ c.pick_location }}</p>
+      <p class="muted">Call #{{ c.call_id }}, {{ c.call_time|dt }}<br>{{ c.caller }}</p>
+      <a class="btn small primary" href="{{ url_for('call_dispatch', call_id=c.call_id) }}">Send ambulance</a>
+    </article>
+    {% else %}<p class="clear">No call is waiting.</p>{% endfor %}
+  </section>
+  {% for name, items in cols %}
+  <section class="lane">
+    <h2>{{ name }} <b>{{ items|length }}</b></h2>
+    {% for d in items %}
+    <article class="tile u-{{ (d.urgency_level or '')|lower }}">
+      <div class="t1"><b>{{ d.vehicle_no }}</b> {{ pill(d.urgency_level) }}</div>
+      <p>{{ d.call_type }} at {{ d.pick_location }}</p>
+      <p class="muted">{{ d.driver }}{% if d.paramedic %} and {{ d.paramedic }}{% endif %}<br>Sent {{ d.dispatch_time|dt }}
+        {% if d.hospital_name %}<br>To {{ d.hospital_name }}, {{ d.branch_name }}{% endif %}</p>
+      {{ chase(d) }}
+      <div class="tilefoot">
+        {{ steps(d, url_for('board_page')) }}
+        <span class="links"><a href="{{ url_for('dispatch_detail', dispatch_id=d.dispatch_id) }}">Details</a>
+        {% if d.status in ('To Hospital', 'At Hospital', 'Completed') %}<a href="{{ url_for('patient_new', dispatch_id=d.dispatch_id) }}">Add patient{% if d.patients %} ({{ d.patients }}){% endif %}</a>{% endif %}
+        {% if d.billing_id %}<a href="{{ url_for('bill_detail', billing_id=d.billing_id) }}">Bill</a> {{ pill(d.bill_status) }}{% elif d.status == 'At Hospital' %}<span class="muted">Bill not made yet</span>{% endif %}</span>
+      </div>
+    </article>
+    {% else %}<p class="clear">None.</p>{% endfor %}
+  </section>
+  {% endfor %}
+</div>
+<script>setTimeout(function(){location.reload()},20000);</script>
+{% endblock %}

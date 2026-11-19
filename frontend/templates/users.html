@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<div class="bar"><p class="muted lead">People who can sign in. Passwords are stored scrambled, so nobody can read them, not even you.</p>
+  <a class="btn primary" href="{{ url_for('user_new') }}">New user</a></div>
+<div class="scroll"><table>
+  <thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Last sign-in</th><th>Status</th><th>Reset password</th><th></th></tr></thead>
+  <tbody>
+  {% for u in users %}
+  <tr><td><b>{{ u.username }}</b></td><td>{{ u.full_name }}</td><td>{{ roles[u.user_role] }}</td><td>{{ u.last_login|dt or 'never' }}</td>
+    <td>{% if u.is_active != 'Y' %}<span class="pill unpaid">Switched off</span>{% elif not u.password_hash %}<span class="pill partial">No password yet</span>{% elif u.locked_minutes %}<span class="pill on-duty">Locked {{ u.locked_minutes|int }} min</span>{% else %}<span class="pill available">Active</span>{% endif %}</td>
+    <td><form method="post" action="{{ url_for('user_password', user_id=u.user_id) }}" class="inlineform">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input name="password" type="password" placeholder="New password" autocomplete="new-password" aria-label="New password"><button class="btn small">Set</button></form></td>
+    <td class="act">
+      {% if u.locked_minutes %}<form method="post" action="{{ url_for('user_unlock', user_id=u.user_id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="link">Unlock</button></form>{% endif %}
+      {% if u.user_id|int != session.get('user_id') %}
+      <form method="post" action="{{ url_for('user_active', user_id=u.user_id) }}"><input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+        <input type="hidden" name="active" value="{{ 'N' if u.is_active == 'Y' else 'Y' }}"><button class="link {{ 'danger' if u.is_active == 'Y' }}">{{ 'Switch off' if u.is_active == 'Y' else 'Switch on' }}</button></form>
+      {% else %}<span class="muted">You</span>{% endif %}
+    </td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

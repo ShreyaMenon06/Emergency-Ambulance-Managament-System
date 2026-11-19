@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill with context %}
+{% block body %}
+<div class="bar"><h1>Billing</h1>
+  <div class="seg2">
+    <a class="btn {{ 'primary' if not status }}" href="{{ url_for('bills_page') }}">All</a>
+    <a class="btn {{ 'primary' if status == 'open' }}" href="{{ url_for('bills_page', status='open') }}">Not fully paid</a>
+    <a class="btn {{ 'primary' if status == 'Paid' }}" href="{{ url_for('bills_page', status='Paid') }}">Paid</a>
+  </div></div>
+<div class="scroll"><table>
+  <thead><tr><th>Receipt</th><th>Date</th><th>Customer</th><th>Dispatch</th><th>Distance (km)</th><th>Total</th><th>Balance</th><th>Made by</th><th>Payment</th></tr></thead>
+  <tbody>
+  {% for b in bills %}
+  <tr><td><a href="{{ url_for('bill_detail', billing_id=b.billing_id) }}">{{ b.receipt or b.billing_id }}</a></td><td>{{ b.bill_date|day }}</td><td>{{ b.customer }}</td>
+      <td>#{{ b.dispatch_id }}</td><td>{{ b.distance_km if b.distance_km is not none else '' }}</td><td>{{ b.total_amount|money }}</td>
+      <td>{{ b.balance|money }}</td><td>{{ b.billed_by_name or '' }}</td><td>{{ pill(b.payment_status) }}</td></tr>
+  {% else %}<tr><td colspan="9" class="muted">No bills.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<p class="muted">The driver or paramedic makes each bill at the end of the trip (My trips) and records the money they collect. You see the status here.</p>
+{% endblock %}
